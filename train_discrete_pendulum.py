@@ -2,12 +2,16 @@ import random
 import numpy as np
 import matplotlib.pyplot as plt
 import discrete_pendulum
+from numpy import save
+from numpy import load
+
 
 # Constant params
 gamma = 0.95 # discount factor
-eps = 0.05 # epsilon-greedy probability param (For SARSA and Q-Learning)
-n_episodes = 100 # number of episodes (For SARSA and Q-Learning)
+eps = 0.2 # epsilon-greedy probability param (For SARSA and Q-Learning)
+# n_episodes = 10000 # number of episodes (For SARSA and Q-Learning)
 alpha = 1/n_episodes # learning rate
+alpha = 0.7
 experiment = False # change to 'True' to generate Learning curves for different alpha and epsilon values
 
 # Experiment params
@@ -26,19 +30,22 @@ n_eps = 4
 #   of 31 x 31 states and 31 actions.
 #   Note that there will only be a grid point at "0" along a given dimension
 #   if the number of grid points in that dimension is odd.    
-env = discrete_pendulum.Pendulum(n_theta=15, n_thetadot=21)
-# env = discrete_pendulum.Pendulum(n_theta=11, n_thetadot=51, n_tau=21)
+# env = discrete_pendulum.Pendulum(n_theta=15, n_thetadot=21)
+# env = discrete_pendulum.Pendulum(n_theta=30, n_thetadot=36)
+env = discrete_pendulum.Pendulum(n_theta=11, n_thetadot=51, n_tau=21)
 
 
 
 ################# SARSA #################
 def sarsa(gamma,eps,n_episodes,alpha,experiment):
     # initialization
-    Q = (1/env.num_states)*np.ones((env.num_states, env.num_actions))
+    # Q = np.ones((env.num_states, env.num_actions))
+    Q = load('Q_sarsa.npy')
     print('State and control dimesnions: ')
     print(np.shape(Q))
     episodes = []
-    pi = np.zeros(env.num_states)
+    pi = np.random.randint(0,env.num_actions,env.num_states)
+    # pi = load('pi_sarsa.npy')
     Gs = []
 
     for i in range(0,n_episodes+1,1): # new trajectory/episode
@@ -98,7 +105,7 @@ def sarsa(gamma,eps,n_episodes,alpha,experiment):
             log['s'].append(s)
             log['a'].append(a)
             log['r'].append(r)
-            log['theta'].append(env.x[0])
+            log['theta'].append(((env.x[0] + np.pi) % (2 * np.pi)) - np.pi)
             log['thetadot'].append(env.x[1])
 
         # Plot data and save to png file
@@ -128,13 +135,14 @@ def sarsa(gamma,eps,n_episodes,alpha,experiment):
 ################# Q-LEARNING #################
 
 def Qlearning(gamma,eps,n_episodes,alpha,experiment):
-    alpha = 1/n_episodes
-    Q = (1/env.num_states)*np.ones((env.num_states, env.num_actions))
+    Q = np.ones((env.num_states, env.num_actions))
+    # Q = load('Q_qlearn.npy')
     print('State and control dimesnions: ')
     print(np.shape(Q))
     Q_candidates = np.zeros(env.num_actions)
     episodes = []
-    pi = np.zeros(env.num_states)
+    pi = np.random.randint(0,env.num_actions,env.num_states)
+    # pi = load('pi_qlearn.npy')
     Gs = []
 
     for i in range(0,n_episodes+1,1): # new trajectory/episode
@@ -186,7 +194,7 @@ def Qlearning(gamma,eps,n_episodes,alpha,experiment):
             log['s'].append(s)
             log['a'].append(a)
             log['r'].append(r)
-            log['theta'].append(env.x[0])
+            log['theta'].append(((env.x[0] + np.pi) % (2 * np.pi)) - np.pi)
             log['thetadot'].append(env.x[1])
 
         # Plot data and save to png file
@@ -221,7 +229,8 @@ def  TD0(gamma,eps,n_episodes,alpha,experiment):
     
     # Estimatting SARSA's Value Function
     Q,pi,Gs,episodes,n_episodes = sarsa(gamma,eps,n_episodes,alpha,experiment)
-    
+    save('Q_sarsa.npy', Q)
+    save('pi_sarsa.npy', pi)
     alpha = 1/n_episodes
 
     for i in range(0,n_episodes+1,1):
@@ -232,10 +241,25 @@ def  TD0(gamma,eps,n_episodes,alpha,experiment):
             (s1, r, done) = env.step(a)
             V[s] = V[s] + alpha*(r + gamma*V[s1] - V[s])
             s = s1
+    # Plot the learning curve
+    plt.figure(plt.gcf().number+1)
+    plt.plot(range(0,env.num_states,1),V)
+    plt.title('SARSA Value Function Learned by TD(0)')
+    plt.xlabel('state s')
+    plt.ylabel('V')
+    plt.savefig('figures/pendulum/sarsa_v_td0_gridworld.png')
+
+    plt.figure(plt.gcf().number+1)
+    plt.plot(range(0,env.num_states,1),pi)
+    plt.title('SARSA Optimal Policy')
+    plt.xlabel('state s')
+    plt.ylabel('\pi')
+    plt.savefig('figures/pendulum/sarsa_pi_td0_gridworld.png')
     
     # Estimatting Q-learning's Value Function
     Q_q,pi_q,Gs_q,episodes,n_episodes = Qlearning(gamma,eps,n_episodes,alpha,experiment)
-        
+    save('Q_qlearn.npy', Q)
+    save('pi_qlearn.npy', pi)        
     alpha = 1/n_episodes
 
     for i in range(0,n_episodes+1,1):
@@ -246,6 +270,22 @@ def  TD0(gamma,eps,n_episodes,alpha,experiment):
             (s1, r, done) = env.step(a)
             V_q[s] = V_q[s] + alpha*(r + gamma*V_q[s1] - V_q[s])
             s = s1
+
+        # Plot the learning curve
+    plt.figure(plt.gcf().number+1)
+    plt.plot(range(0,env.num_states,1),V_q)
+    plt.title('Q-Learning Value Function Learned by TD(0)')
+    plt.xlabel('state s')
+    plt.ylabel('V')
+    plt.savefig('figures/pendulum/qlearn_v_td0_gridworld.png')
+
+    plt.figure(plt.gcf().number+1)
+    plt.plot(range(0,env.num_states,1),pi_q)
+    plt.title('Q-Learning Optimal Policy')
+    plt.xlabel('state s')
+    plt.ylabel('\pi')
+    plt.savefig('figures/pendulum/qlearn_pi_td0_gridworld.png')
+
     print('The Estimated Value Functions (using SARSA and Q-Learning computed policies) are:')
     return V, V_q
 if experiment == False:

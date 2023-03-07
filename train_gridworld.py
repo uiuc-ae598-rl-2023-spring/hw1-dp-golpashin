@@ -11,17 +11,17 @@ env = gridworld.GridWorld(hard_version=False)
 gamma = 0.95 # discount factor
 threshold = 1e-3 # fixed point tolerance (for Policy and Value Iterations)
 eps = 0.05 # epsilon-greedy probability param (For SARSA and Q-Learning)
-n_episodes = 1000 # number of episodes (For SARSA and Q-Learning)
+n_episodes = 5000 # number of episodes (For SARSA and Q-Learning)
 alpha = 1/n_episodes # learning rate
-experiment = False # change to 'True' to generate Learning curves for different alpha and epsilon values
+experiment = True # change to 'True' to generate Learning curves for different alpha and epsilon values
 
 # Experiment params
-min_alpha = 0.1
+min_alpha = 0.05
 max_alpha = 0.8
-n_alpha = 4
+n_alpha = 5
 min_eps = 0.001
-max_eps = 0.2
-n_eps = 4
+max_eps = 0.7
+n_eps = 5
 
 
 
@@ -52,7 +52,10 @@ def value_iteration(gamma,threshold):
             error = max(error,np.abs(V_old-V[s]))
             mean_V[i-1] = statistics.mean(V)
     print('Final Value Iteration error: ') 
-    print(error)        
+    print(error)
+    print('Value Iteration Value FUnction')
+    print(V)
+
     # Plot value function data and save to png file
     plt.figure(plt.gcf().number+1)
     plt.plot(range(0,i,1), mean_V)
@@ -139,7 +142,8 @@ def policy_iteration(gamma,threshold):
         if policy_stable == True:
             break
     # print(i)
-
+    print('Policy Iteration Value FUnction')
+    print(V)
     ## Plotting the agent's trajectories
     s = env.reset() # choose an initial state randomly
     # Create log to store data from simulation
@@ -224,7 +228,8 @@ def sarsa(gamma,eps,n_episodes,alpha,experiment):
         Gs.append(G)            
     for j in range(0,env.num_states,1):
         pi[j] = np.argmax(Q[j,:])
-    # print(pi)
+    print('Optimal Policy Values')
+    print(pi)
 
     if experiment == False:
         ## Plotting the agent's trajectories
@@ -303,7 +308,8 @@ def Qlearning(gamma,eps,n_episodes,alpha,experiment):
         Gs.append(G)            
     for j in range(0,env.num_states,1):
         pi[j] = np.argmax(Q[j,:])
-    # print(pi)
+    print('Optimal Policy Values')
+    print(pi)
 
     if experiment == False:
         ## Plotting the agent's trajectories
@@ -364,6 +370,20 @@ def  TD0(gamma,eps,n_episodes,alpha,experiment):
                 (s1, r, done) = env.step(a)
                 V[s] = V[s] + alpha*(r + gamma*V[s1] - V[s])
                 s = s1
+                # Plot the learning curve
+        plt.figure(plt.gcf().number+1)
+        plt.plot(range(0,env.num_states,1),V)
+        plt.title('SARSA Value Function Learned by TD(0)')
+        plt.xlabel('state s')
+        plt.ylabel('V')
+        plt.savefig('figures/gridworld/sarsa_v_td0_gridworld.png')
+
+        plt.figure(plt.gcf().number+1)
+        plt.plot(range(0,env.num_states,1),pi)
+        plt.title('SARSA Optimal Policy')
+        plt.xlabel('state s')
+        plt.ylabel('\pi')
+        plt.savefig('figures/gridworld/sarsa_pi_td0_gridworld.png')
         
         # Estimatting Q-learning's Value Function
         Q_q,pi_q,Gs_q,episodes,n_episodes = Qlearning(gamma,eps,n_episodes,alpha,experiment)
@@ -378,6 +398,22 @@ def  TD0(gamma,eps,n_episodes,alpha,experiment):
                 (s1, r, done) = env.step(a)
                 V_q[s] = V_q[s] + alpha*(r + gamma*V_q[s1] - V_q[s])
                 s = s1
+
+        # Plot the learning curve
+        plt.figure(plt.gcf().number+1)
+        plt.plot(range(0,env.num_states,1),V_q)
+        plt.title('Q-Learning Value Function Learned by TD(0)')
+        plt.xlabel('state s')
+        plt.ylabel('V')
+        plt.savefig('figures/gridworld/qlearn_v_td0_gridworld.png')
+
+        plt.figure(plt.gcf().number+1)
+        plt.plot(range(0,env.num_states,1),pi_q)
+        plt.title('Q-Learning Optimal Policy')
+        plt.xlabel('state s')
+        plt.ylabel('\pi')
+        plt.savefig('figures/gridworld/qlearn_pi_td0_gridworld.png')
+
         print('The Estimated Value Functions (using SARSA and Q-Learning computed policies) are:')
         return V, V_q
 if experiment == False:
